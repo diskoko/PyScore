@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Score Estimator - ML Prediction System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1em;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table th {
+            background-color: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .missing-mark {
+            background-color: #fed7d7;
+            color: #c53030;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .prediction-result {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .prediction-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .detail-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background-color: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-error {
+            background-color: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .file-upload {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: border-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+        }
+
+        .file-upload.dragover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1>🎓 Score Estimator</h1>
+            <p>Machine Learning-Based Student Mark Prediction System</p>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="card">
+            <h2>📁 Step 1: Upload Markbook Data</h2>
+            <div class="file-upload" id="fileUpload">
+                <input type="file" id="csvFile" accept=".csv" style="display: none;">
+                <p>Click to select CSV file or drag and drop here</p>
+                <div style="text-align: left; margin: 20px; padding: 15px; background: rgba(102, 126, 234, 0.1); border-radius: 8px;">
+                    <p style="font-weight: 600; color: #4a5568; margin-bottom: 10px;">CSV File Requirements:</p>
+                    <ul style="color: #4a5568; font-size: 0.9em; list-style-type: none; padding: 0;">
+                        <li style="margin-bottom: 8px;">📌 Save your spreadsheet as a CSV file from Excel/Sheets</li>
+                        <li style="margin-bottom: 8px;">📊 Format your spreadsheet exactly as shown below</li>
+                        <li style="margin-bottom: 8px;">🔢 Use numbers between 0-100 for scores</li>
+                        <li style="margin-bottom: 8px;">❓ Leave cells empty for missing scores (don't use 0)</li>
+                    </ul>
+                    <p style="font-size: 0.9em; color: #4a5568; margin-top: 10px;">Example Spreadsheet Format:</p>
+                    <div style="margin-top: 10px; border: 1px solid #ccc; border-radius: 4px; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.9em;">
+                        <table style="width: 100%; border-collapse: collapse; background: white;">
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #dee2e6; min-width: 120px;">Student</th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #dee2e6;">Math Test 1</th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #dee2e6;">Math Quiz 1</th>
+                                <th style="padding: 8px; text-align: left;">Assignment 1</th>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                <td style="padding: 8px; border-right: 1px solid #dee2e6;">John Smith</td>
+                                <td style="padding: 8px; border-right: 1px solid #dee2e6;">85</td>
+                                <td style="padding: 8px; border-right: 1px solid #dee2e6;">90</td>
+                                <td style="padding: 8px; background: #f8f9fa;"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; border-right: 1px solid #dee2e6;">Jane Doe</td>
+                                <td style="padding: 8px; border-right: 1px solid #dee2e6; background: #f8f9fa;"></td>
+                                <td style="padding: 8px; border-right: 1px solid #dee2e6;">85</td>
+                                <td style="padding: 8px;">92</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <p style="font-size: 0.85em; color: #666; margin-top: 10px;">
+                        💡 Tip: Empty cells (gray background above) represent missing scores that will be predicted
+                    </p>
+                </div>
+            </div>
+            <div id="fileInfo" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- Data Display Section -->
+        <div class="card" id="dataSection" style="display: none;">
+            <h2>📊 Step 2: Current Markbook Data</h2>
+            <div id="dataDisplay"></div>
+        </div>
+
+        <!-- Prediction Section -->
+        <div class="card" id="predictionSection" style="display: none;">
+            <h2>🔮 Step 3: Make Prediction</h2>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label for="studentSelect">Select Student:</label>
+                        <select id="studentSelect" class="form-control">
+                            <option value="">Choose a student...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assessmentSelect">Select Missing Assessment:</label>
+                        <select id="assessmentSelect" class="form-control">
+                            <option value="">Choose an assessment...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modelType">Select Prediction Model:</label>
+                        <select id="modelType" class="form-control">
+                            <option value="linear">Linear Regression</option>
+                            <option value="ridge">Ridge Regression</option>
+                            <option value="decision_tree">Decision Tree</option>
+                            <option value="knn">K-Nearest Neighbors (KNN)</option>
+                        </select>
+                        <div class="model-info mt-2" style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                            <small class="text-muted">
+                                <strong>Model Benefits:</strong>
+                                <div id="modelDescription">
+                                    <!-- Description will be updated by JS -->
+                                </div>
+                            </small>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center">
+                        <button id="predictBtn" class="btn" onclick="makePrediction()">
+                            🧠 Predict Score
+                        </button>
+                        <button id="autoPredictBtn" class="btn" onclick="autoPredictAll()">🔁 Auto Predict All</button>
+                    </div>
+                </div>
+                <div id="currentScores"></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card" id="resultsSection" style="display: none;">
+            <h2>📈 Step 4: Prediction Results</h2>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                <button class="btn" onclick="showPreviousStudent()" style="padding: 8px 16px;">&larr;</button>
+                <select id="resultStudentSelect" class="form-control" onchange="showResultStudent()"></select>
+                <button class="btn" onclick="showNextStudent()" style="padding: 8px 16px;">&rarr;</button>
+            </div>
+            <div id="predictionResults"></div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="card" id="exportSection" style="display: none;">
+            <h2>💾 Step 5: Export Results</h2>
+            <p>Export your markbook with all predictions filled in:</p>
+            <button id="exportBtn" class="btn" onclick="exportResults()">
+                📥 Export Markbook with Predictions
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables to store application data
+        let studentData = {};
+        let assessmentColumns = [];
+        let predictions = {};
+
+        // File upload handling
+        document.getElementById('fileUpload').addEventListener('click', function() {
+            document.getElementById('csvFile').click();
+        });
+
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type === 'text/csv') {
+                loadCSVFile(file);
+            } else {
+                showAlert('Please select a valid CSV file.', 'error');
+            }
+        });
+
+        // Drag and drop functionality
+        const fileUpload = document.getElementById('fileUpload');
+        fileUpload.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+
+        fileUpload.addEventListener('dragleave', function() {
+            this.classList.remove('dragover');
+        });
+
+        fileUpload.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'text/csv') {
+                document.getElementById('csvFile').files = files;
+                loadCSVFile(files[0]);
+            }
+        });
+
+        // Load and parse CSV file
+        function loadCSVFile(file) {
+            showLoading('Loading CSV file...');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const csv = e.target.result;
+                    const lines = csv.split('\n');
+                    const headers = lines[0].split(',').map(h => h.trim());
+                    
+                    // Validate CSV structure
+                    if (headers.length < 5) {
+                        throw new Error('CSV must have at least 4 assessment columns plus student names');
+                    }
+                    
+                    // Parse student data
+                    studentData = {};
+                    assessmentColumns = headers.slice(1); // Remove student name column
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line) {
+                            const values = line.split(',').map(v => v.trim());
+                            const studentName = values[0];
+                            
+                            if (studentName) {
+                                studentData[studentName] = {};
+                                for (let j = 1; j < values.length && j <= assessmentColumns.length; j++) {
+                                    const score = values[j];
+                                    studentData[studentName][assessmentColumns[j-1]] = 
+                                        (score === '' || score === undefined) ? null : parseFloat(score);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Update UI
+                    document.getElementById('fileInfo').innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ Successfully loaded ${Object.keys(studentData).length} students 
+                            with ${assessmentColumns.length} assessments
+                        </div>
+                    `;
+                    
+                    displayData();
+                    setupPredictionControls();
+                    hideLoading();
+                    
+                } catch (error) {
+                    hideLoading();
+                    showAlert('Error loading CSV: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Display loaded data in a table
+        function displayData() {
+            const dataDisplay = document.getElementById('dataDisplay');
+            let html = '<table class="data-table"><thead><tr><th>Student</th>';
+            
+            // Add assessment headers
+            assessmentColumns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            // Add student rows
+            Object.keys(studentData).forEach(student => {
+                html += `<tr><td><strong>${student}</strong></td>`;
+                assessmentColumns.forEach(assessment => {
+                    const score = studentData[student][assessment];
+                    const predictedScore = predictions[student]?.[assessment];
+                    
+                    if (predictedScore !== undefined) {
+                        // Show predicted score with special highlighting
+                        html += `<td><span style="background-color: #4c51bf; color: white; padding: 4px 8px; border-radius: 4px; font-weight: 600;">${predictedScore.toFixed(1)}</span></td>`;
+                    } else if (score === null || score === undefined || isNaN(score)) {
+                        html += '<td><span class="missing-mark">MISSING</span></td>';
+                    } else {
+                        html += `<td>${score}</td>`;
+                    }
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            dataDisplay.innerHTML = html;
+            document.getElementById('dataSection').style.display = 'block';
+        }
+
+        // Setup prediction controls
+        function setupPredictionControls() {
+            const studentSelect = document.getElementById('studentSelect');
+            studentSelect.innerHTML = '<option value="">Choose a student...</option>';
+            
+            Object.keys(studentData).forEach(student => {
+                const option = document.createElement('option');
+                option.value = student;
+                option.textContent = student;
+                studentSelect.appendChild(option);
+            });
+            
+            studentSelect.addEventListener('change', updateMissingAssessments);
+            document.getElementById('predictionSection').style.display = 'block';
+            // prepare result student selector - only show students with predictions
+            const resultSel = document.getElementById('resultStudentSelect');
+            resultSel.innerHTML = '<option value="">Choose a student...</option>';
+            Object.keys(predictions).forEach(s => {
+                if (Object.keys(predictions[s] || {}).length > 0) {
+                    const o = document.createElement('option'); 
+                    o.value = s; 
+                    o.textContent = s; 
+                    resultSel.appendChild(o);
+                }
+            });
+        }
+
+        // Update missing assessments based on selected student
+        function updateMissingAssessments() {
+            const selectedStudent = document.getElementById('studentSelect').value;
+            const assessmentSelect = document.getElementById('assessmentSelect');
+            
+            assessmentSelect.innerHTML = '<option value="">Choose an assessment...</option>';
+            
+            if (selectedStudent && studentData[selectedStudent]) {
+                const missingAssessments = [];
+                assessmentColumns.forEach(assessment => {
+                    const score = studentData[selectedStudent][assessment];
+                    if (score === null || score === undefined || isNaN(score)) {
+                        missingAssessments.push(assessment);
+                    }
+                });
+                
+                missingAssessments.forEach(assessment => {
+                    const option = document.createElement('option');
+                    option.value = assessment;
+                    option.textContent = assessment;
+                    assessmentSelect.appendChild(option);
+                });
+                
+                // Show current scores
+                displayCurrentScores(selectedStudent);
+            }
+        }
+
+        // Display current scores for selected student
+        function displayCurrentScores(studentName) {
+            const currentScores = document.getElementById('currentScores');
+            let html = '<h3>Current Scores for ' + studentName + '</h3>';
+            html += '<div class="prediction-details">';
+            
+            assessmentColumns.forEach(assessment => {
+                const score = studentData[studentName][assessment];
+                html += '<div class="detail-item">';
+                html += `<div class="detail-label">${assessment}</div>`;
+                if (score === null || score === undefined || isNaN(score)) {
+                    html += '<div class="detail-value missing-mark">MISSING</div>';
+                } else {
+                    html += `<div class="detail-value">${score}</div>`;
+                }
+                html += '</div>';
+            });
+            
+            html += '</div>';
+            currentScores.innerHTML = html;
+        }
+
+        // Make prediction using simple linear regression
+        function makePrediction() {
+            const studentName = document.getElementById('studentSelect').value;
+            const targetAssessment = document.getElementById('assessmentSelect').value;
+            
+            if (!studentName || !targetAssessment) {
+                showAlert('Please select both a student and an assessment.', 'error');
+                return;
+            }
+            
+            showLoading('Calculating prediction...');
+            const modelType = document.getElementById('modelType').value;
+            // use server-first single prediction helper
+            predictSingle(studentName, targetAssessment, modelType).then(result => {
+                displayPredictionResults(studentName, targetAssessment, result);
+                if (!predictions[studentName]) predictions[studentName] = {};
+                predictions[studentName][targetAssessment] = result.predictedScore;
+                hideLoading();
+                document.getElementById('resultsSection').style.display = 'block';
+                document.getElementById('exportSection').style.display = 'block';
+            }).catch(err => {
+                hideLoading();
+                showAlert('Prediction failed: ' + err.message, 'error');
+            });
+        }
+
+        // predictSingle: server-first, fall back to client
+        function predictSingle(studentName, targetAssessment, modelChoice='linear') {
+            return new Promise((resolve, reject) => {
+                // try server
+                fetch('/api/estimate', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ student: studentName, task: targetAssessment, model: document.getElementById('modelSelect') ? document.getElementById('modelSelect').value : modelChoice })
+                }).then(r => r.json()).then(res => {
+                    if (res.error) throw new Error(res.error);
+                    resolve({ predictedScore: res.predictedScore || res.predictedScore, confidence: res.confidence||0, classAverage: res.classAverage||0, studentAverage: res.studentAverage||0, trainingSamples: res.trainingSamples||0 });
+                }).catch(() => {
+                    // fallback to client-side implementation
+                    try {
+                        resolve(performLinearRegression(studentName, targetAssessment));
+                    } catch (e) { reject(e); }
+                });
+            });
+        }
+
+        // Auto predict all missing scores across all students
+        async function autoPredictAll() {
+            showLoading('Estimating all missing scores...');
+            const allStudents = Object.keys(studentData);
+            for (const student of allStudents) {
+                const missing = assessmentColumns.filter(a => {
+                    const s = studentData[student][a];
+                    return (s === null || s === undefined || isNaN(s));
+                });
+                for (const assess of missing) {
+                    try {
+                        const result = await predictSingle(student, assess);
+                        // store
+                        predictions[student] = predictions[student] || {};
+                        predictions[student][assess] = result.predictedScore;
+                        // update UI table cell (simple refresh)
+                        displayData();
+                    } catch (err) {
+                        console.warn('Auto predict failed for', student, assess, err.message);
+                    }
+                }
+            }
+            hideLoading();
+            showAlert('Auto-prediction complete', 'success');
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('exportSection').style.display = 'block';
+            
+            // Update results dropdown with students that have predictions
+            const resultSel = document.getElementById('resultStudentSelect');
+            resultSel.innerHTML = '<option value="">Choose a student...</option>';
+            Object.keys(predictions).forEach(s => {
+                if (Object.keys(predictions[s] || {}).length > 0) {
+                    const o = document.createElement('option'); 
+                    o.value = s; 
+                    o.textContent = s; 
+                    resultSel.appendChild(o);
+                }
+            });
+        }
+
+        // Navigate to previous student
+        function showPreviousStudent() {
+            const select = document.getElementById('resultStudentSelect');
+            const currentIndex = select.selectedIndex;
+            if (currentIndex > 0) {
+                select.selectedIndex = currentIndex - 1;
+                showResultStudent();
+            }
+        }
+
+        // Navigate to next student
+        function showNextStudent() {
+            const select = document.getElementById('resultStudentSelect');
+            if (select.selectedIndex < select.options.length - 1) {
+                select.selectedIndex = select.selectedIndex + 1;
+                showResultStudent();
+            }
+        }
+
+        // showResultStudent: update results view for selected student using stored predictions
+        function showResultStudent() {
+            const sel = document.getElementById('resultStudentSelect').value;
+            if (!sel) return;
+            // if we have predictions for this student, show first predicted assessment
+            const preds = predictions[sel] || {};
+            const keys = Object.keys(preds);
+            if (keys.length === 0) {
+                showAlert('No predictions for this student yet', 'error');
+                return;
+            }
+            const assess = keys[0];
+            const result = { predictedScore: preds[assess], confidence: 0.5, classAverage: calculateClassAverage(assess), studentAverage: calculateStudentAverage(sel), trainingSamples: 0 };
+            displayPredictionResults(sel, assess, result);
+        }
+
+        // Simple linear regression implementation
+        function performLinearRegression(studentName, targetAssessment) {
+            // Get training data (students with scores for target assessment)
+            const trainingData = [];
+            const studentScores = studentData[studentName];
+            
+            // Get other assessments (features)
+            const featureAssessments = assessmentColumns.filter(a => a !== targetAssessment);
+            
+            // Collect training samples
+            Object.keys(studentData).forEach(student => {
+                const targetScore = studentData[student][targetAssessment];
+                if (targetScore !== null && !isNaN(targetScore)) {
+                    // Get feature scores for this student
+                    const features = [];
+                    let validFeatures = true;
+                    
+                    featureAssessments.forEach(assessment => {
+                        const score = studentData[student][assessment];
+                        if (score !== null && !isNaN(score)) {
+                            features.push(score);
+                        } else {
+                            validFeatures = false;
+                        }
+                    });
+                    
+                    if (validFeatures && features.length > 0) {
+                        trainingData.push({
+                            features: features,
+                            target: targetScore
+                        });
+                    }
+                }
+            });
+            
+            if (trainingData.length < 2) {
+                throw new Error('Insufficient training data for reliable prediction');
+            }
+            
+            // Simple linear regression using average of features
+            const studentFeatures = [];
+            featureAssessments.forEach(assessment => {
+                const score = studentScores[assessment];
+                if (score !== null && !isNaN(score)) {
+                    studentFeatures.push(score);
+                } else {
+                    // Use class average for missing features
+                    const classAvg = calculateClassAverage(assessment);
+                    studentFeatures.push(classAvg);
+                }
+            });
+            
+            // Calculate prediction using weighted average approach
+            let totalWeight = 0;
+            let weightedSum = 0;
+            
+            trainingData.forEach(sample => {
+                // Calculate similarity to student (inverse of distance)
+                let distance = 0;
+                for (let i = 0; i < Math.min(sample.features.length, studentFeatures.length); i++) {
+                    distance += Math.pow(sample.features[i] - studentFeatures[i], 2);
+                }
+                distance = Math.sqrt(distance);
+                
+                const weight = 1 / (distance + 1); // Add 1 to avoid division by zero
+                totalWeight += weight;
+                weightedSum += weight * sample.target;
+            });
+            
+            const predictedScore = Math.max(0, Math.min(100, weightedSum / totalWeight));
+            
+            // Calculate additional statistics
+            const classAverage = calculateClassAverage(targetAssessment);
+            const studentAverage = calculateStudentAverage(studentName);
+            const confidence = calculateConfidence(trainingData, studentFeatures);
+            
+            return {
+                predictedScore: predictedScore,
+                confidence: confidence,
+                classAverage: classAverage,
+                studentAverage: studentAverage,
+                trainingSamples: trainingData.length
+            };
+        }
+
+        // Calculate class average for an assessment
+        function calculateClassAverage(assessment) {
+            let total = 0;
+            let count = 0;
+            
+            Object.keys(studentData).forEach(student => {
+                const score = studentData[student][assessment];
+                if (score !== null && !isNaN(score)) {
+                    total += score;
+                    count++;
+                }
+            });
+            
+            return count > 0 ? total / count : 0;
+        }
+
+        // Calculate student's average across all assessments
+        function calculateStudentAverage(studentName) {
+            const scores = studentData[studentName];
+            let total = 0;
+            let count = 0;
+            
+            assessmentColumns.forEach(assessment => {
+                const score = scores[assessment];
+                if (score !== null && !isNaN(score)) {
+                    total += score;
+                    count++;
+                }
+            });
+            
+            return count > 0 ? total / count : 0;
+        }
+
+        // Calculate prediction confidence (simple correlation measure)
+        function calculateConfidence(trainingData, studentFeatures) {
+            if (trainingData.length < 3) return 0.5;
+            
+            // Calculate correlation between features and targets
+            let correlation = 0;
+            const n = trainingData.length;
+            
+            for (let i = 0; i < studentFeatures.length; i++) {
+                let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+                
+                trainingData.forEach(sample => {
+                    if (i < sample.features.length) {
+                        const x = sample.features[i];
+                        const y = sample.target;
+                        sumX += x;
+                        sumY += y;
+                        sumXY += x * y;
+                        sumX2 += x * x;
+                        sumY2 += y * y;
+                    }
+                });
+                
+                const numerator = n * sumXY - sumX * sumY;
+                const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+                
+                if (denominator !== 0) {
+                    correlation += Math.abs(numerator / denominator);
+                }
+            }
+            
+            return Math.min(1, correlation / studentFeatures.length);
+        }
+
+        // Display prediction results
+        function displayPredictionResults(studentName, assessment, result) {
+            const resultsDiv = document.getElementById('predictionResults');
+            
+            const confidenceLevel = result.confidence > 0.7 ? 'High' : 
+                                  result.confidence > 0.4 ? 'Medium' : 'Low';
+            const confidenceColor = result.confidence > 0.7 ? '#48bb78' : 
+                                   result.confidence > 0.4 ? '#ed8936' : '#e53e3e';
+            
+            resultsDiv.innerHTML = `
+                <div class="prediction-result">
+                    <h3>🎯 Prediction for ${studentName}</h3>
+                    <p><strong>Assessment:</strong> ${assessment}</p>
+                    <div style="font-size: 2em; margin: 15px 0;">
+                        <strong>Predicted Score: ${result.predictedScore.toFixed(1)}</strong>
+                    </div>
+                    
+                    <div class="prediction-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Class Average</div>
+                            <div class="detail-value">${result.classAverage.toFixed(1)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Student Average</div>
+                            <div class="detail-value">${result.studentAverage.toFixed(1)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Confidence Level</div>
+                            <div class="detail-value" style="color: ${confidenceColor};">${confidenceLevel}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Training Samples</div>
+                            <div class="detail-value">${result.trainingSamples}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <h4>📊 Analysis:</h4>
+                        <p>
+                            ${result.confidence > 0.7 ? 
+                              'This prediction has high reliability based on strong patterns in the data.' :
+                              result.confidence > 0.4 ?
+                              'This prediction has moderate reliability. Consider additional factors.' :
+                              'This prediction has lower reliability. Use with caution and teacher judgment.'}
+                        </p>
+                        <p style="margin-top: 10px;">
+                            The prediction is based on ${result.trainingSamples} similar students and considers 
+                            both individual performance patterns and class trends.
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Export results
+        function exportResults() {
+            if (Object.keys(predictions).length === 0) {
+                showAlert('No predictions have been made yet. Make some predictions first.', 'error');
+                return;
+            }
+            
+            // Create CSV content with predictions
+            let csvContent = assessmentColumns.join(',');
+            csvContent = 'Student,' + csvContent + '\n';
+            
+            Object.keys(studentData).forEach(student => {
+                let row = student;
+                assessmentColumns.forEach(assessment => {
+                    let score = studentData[student][assessment];
+                    
+                    // Use prediction if original was missing
+                    if ((score === null || isNaN(score)) && 
+                        predictions[student] && predictions[student][assessment]) {
+                        score = predictions[student][assessment].toFixed(1);
+                    }
+                    
+                    row += ',' + (score || '');
+                });
+                csvContent += row + '\n';
+            });
+            
+            // Download the file
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'markbook_with_predictions.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showAlert('Markbook with predictions has been downloaded!', 'success');
+        }
+
+        // Utility functions
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+
+        function showLoading(message) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loadingOverlay';
+            loadingDiv.className = 'loading';
+            loadingDiv.innerHTML = `
+                <div class="spinner"></div>
+                <p>${message}</p>
+            `;
+            document.body.appendChild(loadingDiv);
+        }
+
+        function hideLoading() {
+            const loading = document.getElementById('loadingOverlay');
+            if (loading) {
+                loading.parentNode.removeChild(loading);
+            }
+        }
+
+        // Create sample CSV data for testing
+        function createSampleData() {
+            const sampleCSV = `Student,Math Test 1,Math Test 2,Math Quiz 1,Math Quiz 2,Math Assignment
+Alex Johnson,85,82,90,87,
+Sarah Smith,78,80,85,83,88
+Mike Brown,92,89,95,91,94
+Emma Wilson,,85,88,90,92
+James Davis,88,,92,89,90
+Lisa Garcia,76,79,,82,85
+Tom Anderson,84,87,86,,89
+Kate Lee,90,88,93,91,95`;
+            
+            const blob = new Blob([sampleCSV], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sample_markbook.csv';
+            a.textContent = '📥 Download Sample CSV';
+            a.style.marginLeft = '10px';
+            
+            document.getElementById('fileInfo').appendChild(a);
+        }
+
+        // Model description update handler
+        document.getElementById('modelType').addEventListener('change', function() {
+            const descriptions = {
+                'linear': 'Best for simple, straightforward relationships between scores. Works well when scores follow consistent patterns.',
+                'ridge': 'Similar to linear regression but handles outliers better. Good when some students have unusual score patterns.',
+                'decision_tree': 'Good for finding patterns in different score ranges. Works well when relationships are not strictly linear.',
+                'knn': 'Finds similar students based on their score patterns. Best when students tend to perform similarly across assessments.'
+            };
+            document.getElementById('modelDescription').textContent = descriptions[this.value];
+        });
+
+        // Trigger initial model description
+        document.getElementById('modelType').dispatchEvent(new Event('change'));
+
+        // Initialize sample data download link
+        window.onload = function() {
+            createSampleData();
+        };
+    </script>
+</body>
+</html>
+<script>
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js");
+}
+</script>
+<!DOCTYPE html>
+<html lang="en">
